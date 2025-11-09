@@ -1,0 +1,75 @@
+
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Register</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    /* minimal styling — keep your original styles if you prefer */
+    body{font-family:Arial, sans-serif;display:flex;align-items:center;justify-content:center;height:100vh;margin:0}
+    .card{width:100%;max-width:420px;padding:24px;border-radius:12px;background:#fff;box-shadow:0 8px 30px rgba(0,0,0,0.08)}
+    input{width:100%;padding:10px;margin-top:6px;border-radius:8px;border:1px solid #ddd;box-sizing:border-box}
+    .primary{width:100%;padding:12px;margin-top:12px;border:none;border-radius:8px;background:#6c5ce7;color:#fff;font-weight:700;cursor:pointer}
+  </style>
+</head>
+<body>
+  <div class="card">
+    <h2>Register</h2>
+    <form id="registerForm" novalidate>
+      <label>Username <input name="username" type="text" required minlength="3" placeholder="Pick a username" /></label>
+      <label style="display:block;margin-top:8px">Email <input name="email" type="email" required placeholder="you@example.com" /></label>
+      <label style="display:block;margin-top:8px">Password
+        <div style="position:relative">
+          <input id="password" name="password" type="password" required minlength="6" placeholder="At least 6 characters" />
+          <button type="button" id="pwToggle" style="position:absolute;right:8px;top:50%;transform:translateY(-50%);background:transparent;border:none;cursor:pointer">Show</button>
+        </div>
+      </label>
+
+      <button class="primary" type="submit">Register</button>
+
+      <div style="margin-top:10px">Already have an account? <a href="index.html">Login</a></div>
+    </form>
+  </div>
+
+  <script>
+    const pw = document.getElementById('password');
+    const toggle = document.getElementById('pwToggle');
+    toggle.addEventListener('click', () => {
+      const isHidden = pw.type === 'password';
+      pw.type = isHidden ? 'text' : 'password';
+      toggle.textContent = isHidden ? 'Hide' : 'Show';
+    });
+
+    document.getElementById('registerForm').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const form = e.target;
+      if (!form.checkValidity()) { form.reportValidity(); return; }
+
+      const data = {
+        username: form.username.value.trim(),
+        email: form.email.value.trim(),
+        password: form.password.value
+      };
+
+      try {
+        const res = await fetch('/api/register', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(data)
+        });
+        const json = await res.json();
+        if (json.success) {
+          alert(json.message || 'Registered. Please login.');
+          window.location.href = '/index.html';
+        } else {
+          alert(json.error || 'Registration failed');
+        }
+      } catch (err) {
+        alert('Network or server error');
+        console.error(err);
+      }
+    });
+  </script>
+</body>
+</html>

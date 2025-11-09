@@ -1,0 +1,516 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Checkout — Payment</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root{ --accent:#6c5ce7; --muted:#666; font-family:Inter, "Helvetica Neue", Arial, sans-serif; }
+    body{ margin:0; padding:24px; background:#f7f7fb; color:#111; min-height:100vh; display:flex; align-items:flex-start; justify-content:center; }
+    .wrap{ width:100%; max-width:980px; display:grid; grid-template-columns: 1fr 420px; gap:20px; }
+    .card{ background:#fff; border-radius:12px; padding:18px; box-shadow:0 8px 30px rgba(12,12,20,0.06); }
+    h1{ margin:0 0 8px 0; font-size:1.2rem; }
+    .muted{ color:var(--muted); font-size:0.95rem; }
+    /* Left: payment form */
+    .payment-methods{ display:flex; gap:8px; flex-wrap:wrap; margin:12px 0 18px; }
+    .method{ padding:10px 12px; border-radius:10px; border:1px solid #e6e6ee; cursor:pointer; background:#fafafa; font-weight:700; }
+    .method.selected{ background:linear-gradient(90deg,var(--accent), #4e32d9); color:#fff; border: none; box-shadow: 0 8px 30px rgba(108,92,231,0.12); }
+
+    form{ display:flex; flex-direction:column; gap:12px; }
+    label{ display:block; font-weight:700; font-size:0.92rem; }
+    input[type="text"], input[type="number"], input[type="tel"], input[type="email"], select{
+      width:100%; padding:10px 12px; border-radius:8px; border:1px solid #e6e6ee; box-sizing:border-box;
+      font-size:1rem;
+    }
+    .two{ display:flex; gap:8px; }
+    .two > *{ flex:1; }
+
+    .small{ font-size:0.9rem; color:var(--muted); }
+    .btn{ padding:12px; border-radius:10px; border:none; cursor:pointer; font-weight:800; }
+    .primary{ background:linear-gradient(90deg,var(--accent), #4e32d9); color:#fff; }
+    .ghost{ background:transparent; border:1px solid #ddd; }
+
+    /* right: summary */
+    .summary .line{ display:flex; justify-content:space-between; padding:8px 0; border-bottom:1px dashed #f0f0f4; }
+    .summary .total{ font-weight:900; font-size:1.1rem; padding-top:12px; }
+
+    /* OTP modal */
+    .modal{ position:fixed; inset:0; display:flex; align-items:center; justify-content:center; background:rgba(0,0,0,0.36); z-index:2000; visibility:hidden; opacity:0; transition:opacity .18s; }
+    .modal.open{ visibility:visible; opacity:1; }
+    .modal .panel{ width:100%; max-width:420px; background:#fff; border-radius:12px; padding:18px; box-shadow:0 18px 60px rgba(12,12,20,0.3); }
+
+    .note{ font-size:0.9rem; color:var(--muted); }
+    .error{ color:#d64545; font-weight:700; font-size:0.9rem; }
+
+    @media (max-width:960px){
+      .wrap{ grid-template-columns: 1fr; padding-bottom:24px; }
+      .summary{ order:2; }
+    }
+  </style>
+</head>
+<body>
+  <div class="wrap">
+    <!-- LEFT: Payment form -->
+    <section class="card" id="left">
+      <h1>Payment</h1>
+      <div class="muted">Secure checkout — Choose a payment method</div>
+
+      <div class="payment-methods" role="tablist" aria-label="Payment methods">
+        <button class="method selected" data-method="card" role="tab">Card</button>
+        <button class="method" data-method="upi" role="tab">UPI</button>
+        <button class="method" data-method="netbanking" role="tab">Netbanking</button>
+        <button class="method" data-method="wallet" role="tab">Wallet</button>
+        <button class="method" data-method="cod" role="tab">Cash on Delivery</button>
+      </div>
+
+      <form id="paymentForm" autocomplete="off" novalidate>
+        <!-- Dynamic fields appear here -->
+        <div id="methodFields"></div>
+
+        <div style="display:flex;gap:8px;align-items:center;margin-top:6px">
+          <input type="checkbox" id="saveCard" />
+          <label for="saveCard" class="small">Save card for faster checkout (stored only in browser)</label>
+        </div>
+
+        <div id="formError" class="error" role="alert" style="display:none"></div>
+
+        <div style="display:flex;gap:10px;margin-top:12px;">
+          <button type="button" id="backBtn" class="btn ghost">Back to cart</button>
+          <button type="submit" class="btn primary" id="payNowBtn">Pay now</button>
+        </div>
+
+        <div style="margin-top:10px" class="note">This is a simulated payment page for development. No real money transfers will occur.</div>
+      </form>
+    </section>
+
+    <!-- RIGHT: summary -->
+    <aside class="card summary" id="summary">
+      <h2 style="margin-top:0">Order summary</h2>
+      <div id="itemsList"></div>
+      <div class="line">
+        <div class="muted">Subtotal</div>
+        <div id="subtotal">₹0</div>
+      </div>
+      <div class="line">
+        <div class="muted">Delivery</div>
+        <div id="delivery">₹0</div>
+      </div>
+      <div class="line total">
+        <div>Total</div>
+        <div id="grandTotal">₹0</div>
+      </div>
+      <div style="margin-top:12px" class="small muted">You will be redirected to the confirmation page after a successful payment.</div>
+    </aside>
+  </div>
+
+  <!-- OTP / Simulator Modal -->
+  <div class="modal" id="otpModal" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="panel">
+      <h3 id="otpTitle">Confirm payment</h3>
+      <p id="otpMsg" class="note">We have sent a one-time password (OTP) to the number on your account. Enter it below to complete payment.</p>
+
+      <div style="display:flex;gap:8px;margin-top:10px">
+        <input id="otpInput" type="text" inputmode="numeric" maxlength="6" placeholder="Enter OTP" style="flex:1;padding:10px;border-radius:8px;border:1px solid #e6e6ee" />
+        <button id="otpVerify" class="btn primary">Verify</button>
+      </div>
+
+      <div style="display:flex;gap:8px;margin-top:12px;align-items:center">
+        <button id="otpCancel" class="btn ghost">Cancel</button>
+        <div style="margin-left:auto" class="small muted">Simulated OTP (for testing): <strong id="simOtp">—</strong></div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    /***************
+     * Utilities
+     ***************/
+    function qs(sel, ctx=document) { return ctx.querySelector(sel); }
+    function qsa(sel, ctx=document) { return Array.from(ctx.querySelectorAll(sel)); }
+    function formatINR(n){ return '₹' + Number(n).toLocaleString('en-IN'); }
+
+    // Luhn algorithm for card number validation
+    function luhnCheck(num){
+      const s = num.replace(/\D/g,'');
+      let sum = 0, alt = false;
+      for (let i = s.length - 1; i >= 0; i--) {
+        let d = parseInt(s.charAt(i), 10);
+        if (alt) { d *= 2; if (d > 9) d -= 9; }
+        sum += d; alt = !alt;
+      }
+      return (sum % 10) === 0;
+    }
+
+    // simple UPI id pattern check (very permissive)
+    function validateUpiId(u){ return /^[a-zA-Z0-9.\-_]{2,}@[a-zA-Z]{2,}$/.test(u.trim()); }
+
+    // expiry mm/yy
+    function validateExpiry(mmyy){
+      const m = mmyy.split('/'); if (m.length !== 2) return false;
+      const mm = parseInt(m[0],10), yy = parseInt(m[1],10);
+      if (!mm || mm < 1 || mm > 12) return false;
+      const now = new Date(); const year = now.getFullYear() % 100;
+      const month = now.getMonth() + 1;
+      if (yy < year) return false;
+      if (yy === year && mm < month) return false;
+      return true;
+    }
+
+    // generate 6-digit OTP
+    function genOtp(){ return String(Math.floor(100000 + Math.random()*900000)); }
+
+    /***************
+     * App state & DOM
+     ***************/
+    const methodsEl = qsa('.method');
+    const methodFields = qs('#methodFields');
+    const paymentForm = qs('#paymentForm');
+    const formError = qs('#formError');
+    const payNowBtn = qs('#payNowBtn');
+    const backBtn = qs('#backBtn');
+
+    const itemsList = qs('#itemsList');
+    const subtotalEl = qs('#subtotal');
+    const deliveryEl = qs('#delivery');
+    const grandTotalEl = qs('#grandTotal');
+
+    const otpModal = qs('#otpModal');
+    const otpInput = qs('#otpInput');
+    const otpVerify = qs('#otpVerify');
+    const otpCancel = qs('#otpCancel');
+    const simOtpEl = qs('#simOtp');
+    const otpTitle = qs('#otpTitle');
+    const otpMsg = qs('#otpMsg');
+
+    let selectedMethod = 'card';
+    let checkoutPayload = null;
+    let currentOtp = null;
+
+    /***************
+     * Load checkout payload from localStorage
+     ***************/
+    function loadCheckout(){
+      try {
+        const raw = localStorage.getItem('checkoutPayload');
+        if (!raw) {
+          // No payload — redirect back
+          alert('No checkout data found. Returning to menu/cart.');
+          window.location.href = 'home.html';
+          return;
+        }
+        checkoutPayload = JSON.parse(raw);
+        renderSummary(checkoutPayload);
+      } catch (e) {
+        console.error(e);
+        alert('Failed to load checkout data.');
+        window.location.href = 'home.html';
+      }
+    }
+
+    function renderSummary(payload){
+      itemsList.innerHTML = '';
+      const cart = payload.cart || {};
+      for (const k of Object.keys(cart)){
+        const it = cart[k];
+        const row = document.createElement('div');
+        row.style.display = 'flex'; row.style.justifyContent = 'space-between'; row.style.padding = '8px 0';
+        row.innerHTML = `<div><strong>${it.title}</strong><div class="small muted">${it.qty} × ₹${it.price}</div></div><div style="font-weight:800">₹${it.price * it.qty}</div>`;
+        itemsList.appendChild(row);
+      }
+      const subtotal = Object.values(cart).reduce((s,i)=> s + i.price * i.qty, 0);
+      const delivery = subtotal >= 499 ? 0 : 40; // same rule as home: free above ₹499
+      subtotalEl.textContent = formatINR(subtotal);
+      deliveryEl.textContent = formatINR(delivery);
+      grandTotalEl.textContent = formatINR(subtotal + delivery);
+      // update checkoutPayload total in memory (optional)
+      checkoutPayload.total = subtotal + delivery;
+    }
+
+    /***************
+     * Payment methods UI
+     ***************/
+    function setSelectedMethod(name){
+      selectedMethod = name;
+      methodsEl.forEach(m => m.classList.toggle('selected', m.dataset.method === name));
+      renderMethodFields(name);
+      formError.style.display = 'none';
+      formError.textContent = '';
+    }
+
+    methodsEl.forEach(btn => {
+      btn.addEventListener('click', () => setSelectedMethod(btn.dataset.method));
+    });
+
+    // Render inputs for each payment method
+    function renderMethodFields(name){
+      methodFields.innerHTML = '';
+      if (name === 'card') {
+        methodFields.innerHTML = `
+          <label>Card number
+            <input id="cardNumber" inputmode="numeric" placeholder="1234 5678 9012 3456" maxlength="23" />
+          </label>
+          <div class="two">
+            <label>Expiry (MM/YY)
+              <input id="cardExpiry" placeholder="MM/YY" maxlength="5" />
+            </label>
+            <label>CVV
+              <input id="cardCvv" inputmode="numeric" placeholder="123" maxlength="4" />
+            </label>
+          </div>
+          <label>Name on card
+            <input id="cardName" placeholder="Full name as on card" />
+          </label>
+        `;
+      } else if (name === 'upi') {
+        methodFields.innerHTML = `
+          <label>UPI ID (e.g. yourid@bank)
+            <input id="upiId" placeholder="someone@okaxis" />
+          </label>
+          <div class="note">After clicking Pay, you'll be asked to confirm via a simulated UPI flow (OTP).</div>
+        `;
+      } else if (name === 'netbanking') {
+        methodFields.innerHTML = `
+          <label>Bank
+            <select id="bankSelect">
+              <option value="">Select bank</option>
+              <option value="hdfc">HDFC Bank</option>
+              <option value="icici">ICICI Bank</option>
+              <option value="sbi">State Bank of India</option>
+              <option value="axis">Axis Bank</option>
+              <option value="others">Other bank (Redirect)</option>
+            </select>
+          </label>
+          <div class="note">You'll be redirected to a simulated bank page to complete payment.</div>
+        `;
+      } else if (name === 'wallet') {
+        methodFields.innerHTML = `
+          <label>Wallet provider
+            <select id="walletSelect">
+              <option value="">Select wallet</option>
+              <option value="paytm">Paytm</option>
+              <option value="phonepe">PhonePe</option>
+              <option value="gpay">Google Pay</option>
+            </select>
+          </label>
+          <label>Wallet mobile number
+            <input id="walletMobile" inputmode="tel" placeholder="10-digit mobile" maxlength="10" />
+          </label>
+          <div class="note">A one-time code will be sent to the wallet number (simulated).</div>
+        `;
+      } else if (name === 'cod') {
+        methodFields.innerHTML = `
+          <div class="note">You chose Cash on Delivery. Please keep exact change ready. No online payment required.</div>
+          <label>Contact number
+            <input id="codMobile" inputmode="tel" maxlength="10" placeholder="10-digit mobile number" />
+          </label>
+        `;
+      }
+    }
+
+    /***************
+     * Form submit: handle simulated payment flows
+     ***************/
+    paymentForm.addEventListener('submit', async (ev) => {
+      ev.preventDefault();
+      formError.style.display = 'none';
+      formError.textContent = '';
+
+      // Basic checks
+      if (!checkoutPayload) { alert('No order to pay.'); window.location.href='home.html'; return; }
+
+      // Validate by method
+      if (selectedMethod === 'card') {
+        const num = (qs('#cardNumber') || {}).value || '';
+        const expiry = (qs('#cardExpiry') || {}).value || '';
+        const cvv = (qs('#cardCvv') || {}).value || '';
+        const name = (qs('#cardName') || {}).value || '';
+        if (!num || !expiry || !cvv || !name) { showError('Please fill all card fields.'); return; }
+        const clean = num.replace(/\s+/g,'');
+        if (!/^\d{12,19}$/.test(clean) || !luhnCheck(clean)) { showError('Card number looks invalid.'); return; }
+        if (!validateExpiry(expiry)) { showError('Card expiry invalid or card expired.'); return; }
+        if (!/^\d{3,4}$/.test(cvv)) { showError('CVV must be 3 or 4 digits.'); return; }
+
+        // Simulate OTP flow for card
+        currentOtp = genOtp();
+        openOtpModal('Card verification', `A one-time password has been sent to your bank (simulated). Enter OTP to complete payment.`);
+        simOtpEl.textContent = currentOtp; // show for testing
+        otpTitle.textContent = 'Enter card OTP';
+        return;
+      }
+
+      if (selectedMethod === 'upi') {
+        const id = (qs('#upiId') || {}).value || '';
+        if (!id || !validateUpiId(id)) { showError('Please enter a valid UPI ID.'); return; }
+
+        // Simulate UPI collect + OTP
+        currentOtp = genOtp();
+        openOtpModal('UPI confirmation', `A UPI collect request has been sent to ${id} (simulated). Enter OTP to accept and complete payment.`);
+        simOtpEl.textContent = currentOtp;
+        otpTitle.textContent = 'Enter UPI OTP';
+        return;
+      }
+
+      if (selectedMethod === 'netbanking') {
+        const bank = (qs('#bankSelect') || {}).value || '';
+        if (!bank) { showError('Select a bank to continue.'); return; }
+
+        // Simulate redirect: show a quick fake bank page (we won't actually navigate away)
+        // We'll wait 1.2s and then "complete" the redirect with success.
+        payNowBtn.disabled = true;
+        payNowBtn.textContent = 'Redirecting to bank...';
+        setTimeout(() => {
+          // simulate bank success
+          completePayment({ method: 'netbanking', gateway: bank, txn: 'NET' + Date.now() });
+        }, 1200);
+        return;
+      }
+
+      if (selectedMethod === 'wallet') {
+        const wallet = (qs('#walletSelect') || {}).value || '';
+        const mobile = (qs('#walletMobile') || {}).value || '';
+        if (!wallet || !/^\d{10}$/.test(mobile)) { showError('Select wallet and enter a valid 10-digit mobile number.'); return; }
+
+        // simulate wallet OTP
+        currentOtp = genOtp();
+        openOtpModal('Wallet confirmation', `A one-time code has been sent to ${mobile} (simulated). Enter OTP to complete payment.`);
+        simOtpEl.textContent = currentOtp;
+        otpTitle.textContent = 'Enter wallet OTP';
+        return;
+      }
+
+      if (selectedMethod === 'cod') {
+        const mobile = (qs('#codMobile') || {}).value || '';
+        if (!/^\d{10}$/.test(mobile)) { showError('Enter a valid mobile number for delivery.'); return; }
+
+        // Confirm COD immediately
+        completePayment({ method: 'cod', contact: mobile, txn: 'COD-' + Date.now() });
+        return;
+      }
+    });
+
+    function showError(msg){
+      formError.style.display = 'block';
+      formError.textContent = msg;
+    }
+
+    /***************
+     * OTP modal handlers
+     ***************/
+    function openOtpModal(title, msg){
+      otpTitle.textContent = title;
+      otpMsg.textContent = msg;
+      otpInput.value = '';
+      simOtpEl.textContent = currentOtp || '—';
+      otpModal.classList.add('open');
+      otpModal.setAttribute('aria-hidden','false');
+      otpInput.focus();
+    }
+    function closeOtpModal(){
+      otpModal.classList.remove('open');
+      otpModal.setAttribute('aria-hidden','true');
+      simOtpEl.textContent = '—';
+      currentOtp = null;
+    }
+
+    otpVerify.addEventListener('click', () => {
+      const entered = otpInput.value.trim();
+      if (!/^\d{6}$/.test(entered)) { alert('Enter a 6-digit OTP'); return; }
+      if (entered !== currentOtp) { alert('Incorrect OTP (this is simulated).'); return; }
+      // OTP correct — complete payment
+      closeOtpModal();
+      completePayment({ method: selectedMethod, txn: 'SIM' + Date.now() });
+    });
+
+    otpCancel.addEventListener('click', () => {
+      closeOtpModal();
+    });
+
+    /***************
+     * Payment completion: store order and redirect
+     ***************/
+    function completePayment(meta){
+      // Save confirmed order to localStorage 'orders' (existing app reads this)
+      try {
+        const raw = localStorage.getItem('orders') || '[]';
+        const arr = JSON.parse(raw);
+        const order = {
+          id: 'ORD' + Date.now(),
+          cart: checkoutPayload.cart,
+          total: checkoutPayload.total,
+          method: meta.method,
+          meta,
+          timestamp: Date.now(),
+          confirmed: true
+        };
+        arr.unshift(order);
+        localStorage.setItem('orders', JSON.stringify(arr.slice(0, 50)));
+
+        // Also remove temporary checkout payload (so checkout isn't re-used)
+        localStorage.removeItem('checkoutPayload');
+
+        // Optionally store lastPayment for faster fill
+        if (meta.method === 'card' && qs('#saveCard') && qs('#saveCard').checked) {
+          const cardData = { last4: (qs('#cardNumber').value || '').slice(-4), name: (qs('#cardName').value || '') };
+          localStorage.setItem('lastPayment', JSON.stringify(cardData));
+        }
+
+        // Redirect to confirmation page
+        // small delay to show success
+        payNowBtn.disabled = true;
+        payNowBtn.textContent = 'Payment successful ✓';
+        setTimeout(() => { window.location.href = 'order-confirmation.html'; }, 700);
+      } catch (e) {
+        console.error(e);
+        alert('Failed to save order. Please try again.');
+      }
+    }
+
+    /***************
+     * Back to cart
+     ***************/
+    backBtn.addEventListener('click', () => {
+      window.location.href = 'home.html';
+    });
+
+    /***************
+     * Page init
+     ***************/
+    (function init(){
+      loadCheckout();
+      setSelectedMethod('card');
+      // Pre-fill commonly saved info if present
+      try {
+        const lp = JSON.parse(localStorage.getItem('lastPayment') || '{}');
+        if (lp && lp.last4 && qs('#cardNumber')) {
+          // we can't prefill full card; show masked
+          // wait for render
+          setTimeout(()=> {
+            const cnum = qs('#cardNumber');
+            if (cnum) cnum.value = '•••• •••• •••• ' + lp.last4;
+          }, 250);
+        }
+      } catch(e){ /* ignore */ }
+
+      // small accessibility: close OTP modal on Esc
+      document.addEventListener('keydown', e => {
+        if (e.key === 'Escape' && otpModal.classList.contains('open')) closeOtpModal();
+      });
+    })();
+
+    // Make input nicer: format card number with spaces
+    document.addEventListener('input', (e) => {
+      if (e.target && e.target.id === 'cardNumber') {
+        let v = e.target.value.replace(/\D/g,'').slice(0,19);
+        const parts = [];
+        for (let i=0;i<v.length;i+=4) parts.push(v.slice(i,i+4));
+        e.target.value = parts.join(' ');
+      }
+      if (e.target && e.target.id === 'cardExpiry') {
+        let v = e.target.value.replace(/\D/g,'').slice(0,4);
+        if (v.length >= 3) v = v.slice(0,2) + '/' + v.slice(2);
+        e.target.value = v;
+      }
+    });
+  </script>
+</body>
+</html>

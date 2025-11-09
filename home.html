@@ -1,0 +1,698 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8" />
+  <title>Delicia — Menu</title>
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <style>
+    :root{
+      --accent: #6c5ce7;
+      --accent-2: #4e32d9;
+      --card: rgba(255,255,255,0.92);
+      --muted: #666;
+      --radius: 14px;
+      font-family: Inter, "Helvetica Neue", Arial, sans-serif;
+    }
+
+    html,body{
+      height:100%;
+      margin:0;
+      background: url("https://images.unsplash.com/photo-1541544183511-64ac9e6b3b1e?auto=format&fit=crop&w=1600&q=80") no-repeat center center fixed;
+      background-size: cover;
+      -webkit-font-smoothing:antialiased;
+      display:flex;
+      flex-direction:column;
+      min-height:100vh;
+    }
+
+    /* overlay */
+    body::before{
+      content:"";
+      position:fixed;
+      inset:0;
+      background: linear-gradient(180deg, rgba(0,0,0,0.24), rgba(0,0,0,0.36));
+      z-index:0;
+    }
+
+    /* header / menu z-index kept low so profile menu can be above it */
+    header{
+      position:relative;
+      z-index:2;
+      display:flex;
+      align-items:center;
+      justify-content:space-between;
+      padding:16px 20px;
+      max-width:1100px;
+      margin:18px auto 8px;
+      width:calc(100% - 40px);
+      box-sizing:border-box;
+    }
+
+    .brand{
+      display:flex;
+      gap:12px;
+      align-items:center;
+      color:white;
+      text-decoration:none;
+    }
+    .logo{
+      width:48px;
+      height:48px;
+      border-radius:12px;
+      background: linear-gradient(135deg,var(--accent),var(--accent-2));
+      display:flex;
+      align-items:center;
+      justify-content:center;
+      color:white;
+      font-weight:800;
+      font-size:1rem;
+      box-shadow: 0 8px 22px rgba(78,50,217,0.18);
+    }
+    h1 { margin:0; color:white; font-size:1.05rem; letter-spacing:0.2px; }
+    .tag{ margin:0; color:rgba(255,255,255,0.9); font-size:0.82rem; opacity:0.95; }
+
+    .controls{ display:flex; gap:10px; align-items:center; }
+
+    .cart-btn{
+      position:relative;
+      background:transparent;
+      border:1px solid rgba(255,255,255,0.14);
+      color:white;
+      padding:8px 10px;
+      border-radius:10px;
+      cursor:pointer;
+      font-weight:700;
+      backdrop-filter: blur(6px);
+    }
+    .cart-count{
+      position:absolute;
+      top:-6px;
+      right:-6px;
+      background:#ff6b6b;
+      color:white;
+      width:20px;height:20px;
+      display:flex;align-items:center;justify-content:center;
+      border-radius:999px;
+      font-size:0.78rem;
+      box-shadow:0 6px 14px rgba(0,0,0,0.3);
+    }
+
+    /* profile button */
+    .profile-btn{
+      display:flex;
+      gap:10px;
+      align-items:center;
+      background: rgba(255,255,255,0.06);
+      border:1px solid rgba(255,255,255,0.12);
+      color:white;
+      padding:6px 10px;
+      border-radius:999px;
+      cursor:pointer;
+      backdrop-filter: blur(6px);
+      font-weight:700;
+    }
+    .avatar{
+      width:36px;
+      height:36px;
+      border-radius:50%;
+      overflow:hidden;
+      display:flex;align-items:center;justify-content:center;
+      background:linear-gradient(90deg,var(--accent),var(--accent-2));
+      color:white;font-weight:800;font-size:0.95rem;
+      flex-shrink:0;
+    }
+
+    main{
+      position:relative;
+      z-index:3;
+      width:100%;
+      max-width:1100px;
+      margin:12px auto 48px;
+      padding:0 20px;
+      box-sizing:border-box;
+      display:flex;
+      gap:24px;
+      align-items:flex-start;
+    }
+
+    /* left column: menu card */
+    .menu-card{
+      width:100%;
+      background:var(--card);
+      border-radius:var(--radius);
+      padding:20px;
+      box-shadow:0 12px 36px rgba(12,12,20,0.18);
+      border:1px solid rgba(0,0,0,0.06);
+      box-sizing:border-box;
+      /* keep z-index low relative to profile menu */
+      z-index:3;
+    }
+
+    .hero{ display:flex; align-items:center; justify-content:space-between; gap:14px; margin-bottom:14px; }
+    .hero h2{ margin:0; font-size:1.2rem; color:#222; }
+    .hero p { margin:0; color:var(--muted); font-size:0.92rem; }
+
+    /* category tabs */
+    .tabs{ display:flex; gap:8px; margin:14px 0 20px; flex-wrap:wrap; }
+    .tab{ padding:8px 12px; border-radius:999px; background:rgba(0,0,0,0.04); cursor:pointer; font-weight:700; color:#333; border:1px solid rgba(0,0,0,0.03); }
+    .tab.active{ background: linear-gradient(90deg,var(--accent),var(--accent-2)); color:white; box-shadow: 0 8px 20px rgba(108,92,231,0.12); }
+
+    /* items grid */
+    .items{ display:grid; grid-template-columns: repeat(2, 1fr); gap:14px; }
+    .item{ display:flex; gap:12px; align-items:flex-start; padding:12px; border-radius:12px; background: linear-gradient(180deg, rgba(255,255,255,0.98), rgba(250,250,250,0.98)); border:1px solid rgba(0,0,0,0.04); }
+    .thumb{ width:96px; height:72px; border-radius:10px; background:#eee; flex-shrink:0; overflow:hidden; }
+    .thumb img{ width:100%; height:100%; object-fit:cover; display:block; }
+
+    .info{ flex:1; display:flex; flex-direction:column; gap:6px; }
+    .info .title{ font-weight:800; color:#222; font-size:0.98rem; display:flex; justify-content:space-between; align-items:center; gap:8px; }
+    .info .desc{ color:var(--muted); font-size:0.86rem; margin-top:2px; }
+    .info .row{ display:flex; align-items:center; justify-content:space-between; gap:8px; margin-top:6px; }
+
+    .price{ font-weight:800; color:var(--accent-2); }
+    .add-btn{ background: linear-gradient(90deg,var(--accent),var(--accent-2)); color:white; border:none; padding:8px 12px; border-radius:10px; font-weight:700; cursor:pointer; }
+
+    /* cart drawer */
+    .cart-drawer{
+      position:fixed;
+      right:18px;
+      bottom:18px;
+      width:360px;
+      max-width:calc(100% - 36px);
+      background:var(--card);
+      border-radius:14px;
+      box-shadow:0 20px 60px rgba(12,12,20,0.3);
+      border:1px solid rgba(0,0,0,0.06);
+      z-index:20;
+      transform:translateY(140%);
+      transition:transform .28s cubic-bezier(.2,.9,.25,1);
+      overflow:hidden;
+    }
+    .cart-drawer.open{ transform:translateY(0%); }
+    .cart-head{ display:flex; align-items:center; justify-content:space-between; padding:12px 16px; border-bottom:1px solid rgba(0,0,0,0.04); }
+    .cart-items{ max-height:320px; overflow:auto; padding:12px 16px; }
+    .cart-item{ display:flex; gap:8px; align-items:center; justify-content:space-between; margin-bottom:10px; }
+    .cart-foot{ padding:12px 16px; border-top:1px solid rgba(0,0,0,0.04); display:flex; gap:10px; align-items:center; justify-content:space-between; }
+
+    /* orders modal */
+    .modal { position:fixed; left:50%; top:50%; transform: translate(-50%,-50%); background:var(--card); width:calc(100% - 40px); max-width:540px; border-radius:12px; padding:14px; box-shadow:0 24px 80px rgba(12,12,20,0.4); z-index:60; display:none; }
+    .modal.open{ display:block; }
+    .modal .modal-head{ display:flex; justify-content:space-between; align-items:center; margin-bottom:8px; }
+    .modal .orders-list{ max-height:360px; overflow:auto; }
+    .modal .order { border-bottom:1px solid rgba(0,0,0,0.04); padding:8px 0; display:flex; justify-content:space-between; gap:8px; }
+
+    /* profile menu - moved out of header and fixed to viewport */
+    .profile-menu{
+      position: fixed;
+      width: 280px;
+      background: var(--card);
+      border-radius: 12px;
+      box-shadow: 0 26px 80px rgba(12,12,20,0.28);
+      border: 1px solid rgba(0,0,0,0.06);
+      padding: 12px;
+      display: none;
+      z-index: 99999; /* very high so it's above everything */
+      -webkit-overflow-scrolling: touch;
+    }
+    .profile-menu.open{ display:block; }
+    .profile-header{ display:flex; gap:10px; align-items:center; padding-bottom:8px; border-bottom:1px solid rgba(0,0,0,0.04); margin-bottom:8px; }
+    .profile-header .name{ font-weight:800; color:#222; }
+    .profile-actions{ display:flex; flex-direction:column; gap:8px; }
+    .profile-actions button{ text-align:left; background:transparent;border:none;padding:10px;border-radius:8px;cursor:pointer;font-weight:700;color:#333; }
+    .profile-actions button:hover{ background:rgba(0,0,0,0.03); }
+
+    /* responsive */
+    @media (max-width:920px){
+      main{ padding:0 14px; gap:12px; }
+      .items{ grid-template-columns: 1fr; }
+      .cart-drawer{ right:12px; left:12px; width:auto; }
+      .profile-menu{ right:12px; left:auto; width:calc(100% - 24px); }
+    }
+    @media (max-width:520px){
+      header{ padding:12px; }
+      .brand h1{ font-size:1rem; }
+      .profile-btn > div { display:none; } /* show only avatar on tiny screens */
+      .profile-btn{ padding:6px; }
+      .profile-menu{ width:calc(100% - 20px); left:10px !important; } /* full-width style */
+      .profile-menu .profile-actions button{ padding:12px; }
+      .cart-btn{ padding:8px; font-size:0.95rem; }
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <a class="brand" href="#">
+      <div class="logo">D</div>
+      <div>
+        <h1>Delicia</h1>
+        <div class="tag">Crafted flavors • Fresh ingredients</div>
+      </div>
+    </a>
+
+    <div class="controls">
+      <button class="cart-btn" id="openCart" aria-expanded="false" aria-controls="cartDrawer">
+        Cart
+        <span class="cart-count" id="cartCount">0</span>
+      </button>
+
+      <!-- Profile button (keeps in header) -->
+      <div style="position:relative;">
+        <button id="profileBtn" class="profile-btn" aria-haspopup="true" aria-expanded="false" type="button">
+          <div class="avatar" id="avatarEl">D</div>
+          <div style="text-align:left;">
+            <div style="font-size:0.88rem" id="profileName">Guest</div>
+            <div style="font-size:0.72rem; color:rgba(255,255,255,0.85)">Profile</div>
+          </div>
+        </button>
+      </div>
+    </div>
+  </header>
+
+  <!-- PROFILE MENU MOVED HERE (direct child of body) -->
+  <div class="profile-menu" id="profileMenu" role="menu" aria-hidden="true">
+    <div class="profile-header">
+      <div class="avatar" id="menuAvatar">D</div>
+      <div>
+        <div class="name" id="menuName">Guest</div>
+        <div style="font-size:0.82rem; color:var(--muted)" id="menuEmail">—</div>
+      </div>
+    </div>
+
+    <div style="margin-bottom:8px;">
+      <label style="display:flex;gap:8px;align-items:center;">
+        <input type="file" id="photoInput" accept="image/*" style="display:none">
+        <button id="changePhotoBtn" style="padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,0.04);background:#fff;cursor:pointer;font-weight:700">Change Photo</button>
+        <button id="removePhotoBtn" style="padding:8px;border-radius:8px;border:1px solid rgba(0,0,0,0.04);background:#fff;cursor:pointer;font-weight:700">Remove</button>
+      </label>
+    </div>
+
+    <div class="profile-actions" role="menu">
+      <button id="showProfile" type="button">My Profile</button>
+      <button id="showOrders" type="button">My Orders</button>
+      <button id="myCartFromMenu" type="button">My Cart</button>
+      <button id="logoutBtn" type="button" style="color:#d64545">Logout</button>
+    </div>
+  </div>
+
+  <main>
+    <section class="menu-card" aria-labelledby="menu-title">
+      <div class="hero">
+        <div>
+          <h2 id="menu-title">Our Menu</h2>
+          <p>Tap a category and add items to your cart. All dishes are prepared to order.</p>
+        </div>
+        <div style="text-align:right;">
+          <div style="font-weight:800; color:var(--muted)">Open • Today 11:00 - 22:00</div>
+          <div style="color:var(--muted); font-size:0.85rem">Free delivery over ₹499</div>
+        </div>
+      </div>
+
+      <nav class="tabs" role="tablist" aria-label="Menu categories">
+        <button class="tab active" data-cat="starters">Starters</button>
+        <button class="tab" data-cat="mains">Mains</button>
+        <button class="tab" data-cat="roti">Roties</button>
+        <button class="tab" data-cat="curries">Curries</button>
+        <button class="tab" data-cat="desserts">Desserts</button>
+        <button class="tab" data-cat="drinks">Drinks</button>
+      </nav>
+
+      <div id="items" class="items" aria-live="polite">
+        <!-- Items inserted by JS -->
+      </div>
+    </section>
+  </main>
+
+  <!-- Cart drawer -->
+  <div class="cart-drawer" id="cartDrawer" aria-hidden="true">
+    <div class="cart-head">
+      <strong>Order</strong>
+      <button id="closeCart" style="background:transparent;border:none;cursor:pointer;font-weight:700;">Close</button>
+    </div>
+    <div class="cart-items" id="cartItems"></div>
+    <div class="cart-foot">
+      <div style="font-weight:800">Total: <span id="cartTotal">₹0</span></div>
+      <button id="checkoutBtn" style="background:linear-gradient(90deg,var(--accent),var(--accent-2));color:white;border:none;padding:10px 14px;border-radius:10px;cursor:pointer;font-weight:800">Checkout</button>
+    </div>
+  </div>
+
+  <!-- Orders modal -->
+  <div class="modal" id="ordersModal" role="dialog" aria-modal="true" aria-hidden="true">
+    <div class="modal-head">
+      <strong>My Orders</strong>
+      <button id="closeOrders" style="background:transparent;border:none;font-weight:800;cursor:pointer">Close</button>
+    </div>
+    <div class="orders-list" id="ordersList"></div>
+  </div>
+
+  <script>
+    // menu data
+const MENU = [
+  { id:'s1', cat:'starters', title:'Garlic Bread', desc:'Toasted ciabatta, garlic butter', price:120, img:'garlicbread.jpg' },
+  { id:'s2', cat:'starters', title:'Chicken Manchurian', desc:'Cabbage, Corn flour, olive oil', price:150, img:'chman.jpg' },
+  { id:'s3', cat:'starters', title:'Cheese Balls', desc:'Crispy fried cheese with herbs', price:160, img:'cheeseballs.jpg' },
+  { id:'s4', cat:'starters', title:'Chicken Wings', desc:'Smoky BBQ glaze, served hot', price:190, img:'chiwin.jpg' },
+  { id:'s5', cat:'starters', title:'Bread Omletee', desc:'Bread, Egg, and Toppings', price:90, img:'breadom.jpg' },
+
+  { id:'m1', cat:'mains', title:'Chicken dum Biryani', desc:'Chicken, Basmati Rice', price:199, img:'dum.jpg' },
+  { id:'m2', cat:'mains', title:'Special Chicken Fry piece Biryani', desc:'Fried Piece', price:249, img:'fried.jpg' },
+  { id:'m3', cat:'mains', title:'Paneer Biryani', desc:'creamy tomato gravy', price:229, img:'paneer.jpg' },
+  { id:'m4', cat:'mains', title:'Mutton Dum Biryani', desc:'Mutton, Basmati', price:299, img:'Mutton.jpg' },
+  { id:'m5', cat:'mains', title:'Veg Biryani', desc:'Fragrant basmati rice, fresh vegetables', price:149, img:'veg.jpg' },
+
+  { id:'r1', cat:'roti', title:'Plain Naan', desc:'Soft tandoor-baked flatbread', price:30, img:'plain.jpg' },
+  { id:'r2', cat:'roti', title:'Butter Naan', desc:'Naan brushed with butter', price:40, img:'butter.jpg' },
+  { id:'r3', cat:'roti', title:'Garlic Naan', desc:'Naan topped with garlic and herbs', price:55, img:'garlic.jpg' },
+  { id:'r4', cat:'roti', title:'Tandoori Roti', desc:'Whole wheat flatbread from tandoor', price:25, img:'tandoori.jpg' },
+  { id:'r5', cat:'roti', title:'Lachha Paratha', desc:'Layered flaky whole wheat paratha', price:60, img:'laccha.jpg' },
+
+  { id:'c1', cat:'curries', title:'Butter Chicken', desc:'Creamy tomato gravy, tender chicken', price:320, img:'butterchicken.jpg' },
+  { id:'c2', cat:'curries', title:'Paneer Butter Masala', desc:'Cottage cheese in rich tomato cream', price:280, img:'paneer-butter-masala-recipe.jpg' },
+  { id:'c3', cat:'curries', title:'Rogan Josh', desc:'Slow-cooked lamb curry with spices', price:360, img:'rogan.jpg' },
+  { id:'c4', cat:'curries', title:'Dal Tadka', desc:'Yellow lentils tempered with spices', price:140, img:'dal.jpg' },
+  { id:'c5', cat:'curries', title:'Chana Masala', desc:'Spiced chickpeas in tangy gravy', price:160, img:'chana.jpg' },
+
+  { id:'d1', cat:'desserts', title:'Molten Chocolate Cake', desc:'Warm cake with gooey chocolate center', price:220, img:'molten.jpg' },
+  { id:'d2', cat:'desserts', title:'Apricot Delight', desc:'A simple, no-bake dessert', price:180, img:'Apricot.jpg' },
+  { id:'d3', cat:'desserts', title:'Gulab Jamun', desc:'Classic Indian sweet, hot sugar syrup', price:120, img:'gulab.jpg' },
+  { id:'d4', cat:'desserts', title:'Cheesecake', desc:'Baked cheesecake with fruit topping', price:240, img:'cheese.jpg' },
+
+  { id:'dr1', cat:'drinks', title:'Lemonade', desc:'Fresh lemon, mint, soda', price:90, img:'Lemonade-4.jpg' },
+  { id:'dr2', cat:'drinks', title:'Iced Latte', desc:'Espresso, milk, ice', price:140, img:'icedlatte.jpg' },
+  { id:'dr3', cat:'drinks', title:'Mango Smoothie', desc:'Fresh mango, yogurt, honey', price:160, img:'mango.jpg' },
+  { id:'dr4', cat:'drinks', title:'Masala Chai', desc:'Indian spiced milk tea', price:80, img:'chai.jpg' },
+  { id:'dr5', cat:'drinks', title:'Cold Coffee', desc:'Whipped cold coffee with ice cream', price:150, img:'coldcoffee.jpg' },
+];
+
+    // state
+    const state = { cat:'starters', cart:{} };
+
+    // elements
+    const itemsEl = document.getElementById('items');
+    const tabs = document.querySelectorAll('.tab');
+    const cartCount = document.getElementById('cartCount');
+    const cartDrawer = document.getElementById('cartDrawer');
+    const cartItemsEl = document.getElementById('cartItems');
+    const cartTotalEl = document.getElementById('cartTotal');
+
+    // profile elements
+    const profileBtn = document.getElementById('profileBtn');
+    const profileMenu = document.getElementById('profileMenu');
+    const profileNameEl = document.getElementById('profileName');
+    const avatarEl = document.getElementById('avatarEl');
+    const menuAvatar = document.getElementById('menuAvatar');
+    const menuName = document.getElementById('menuName');
+    const menuEmail = document.getElementById('menuEmail');
+    const changePhotoBtn = document.getElementById('changePhotoBtn');
+    const removePhotoBtn = document.getElementById('removePhotoBtn');
+    const photoInput = document.getElementById('photoInput');
+
+    const ordersModal = document.getElementById('ordersModal');
+    const ordersList = document.getElementById('ordersList');
+    const closeOrders = document.getElementById('closeOrders');
+
+    // render menu items
+    function renderItems(){
+      itemsEl.innerHTML = '';
+      const list = MENU.filter(i => i.cat === state.cat);
+      for(const it of list){
+        const div = document.createElement('div');
+        div.className = 'item';
+        div.innerHTML = `
+          <div class="thumb"><img src="${it.img}" alt="${it.title}"></div>
+          <div class="info">
+            <div class="title">
+              <span>${it.title}</span>
+              <span class="price">₹${it.price}</span>
+            </div>
+            <div class="desc">${it.desc}</div>
+            <div class="row">
+              <div style="color:var(--muted); font-size:0.86rem">Ready in 12–18 min</div>
+              <button class="add-btn" data-id="${it.id}">Add</button>
+            </div>
+          </div>
+        `;
+        itemsEl.appendChild(div);
+      }
+    }
+
+    function setActiveTab(name){
+      tabs.forEach(t => t.classList.toggle('active', t.dataset.cat === name));
+    }
+
+    // cart helpers
+    function addToCart(id){
+      const item = MENU.find(m => m.id === id);
+      if(!item) return;
+      const existing = state.cart[id];
+      state.cart[id] = existing ? { ...existing, qty: existing.qty + 1 } : { ...item, qty: 1 };
+      updateCartUI();
+      openCartTemp();
+    }
+
+    function removeFromCart(id){
+      delete state.cart[id];
+      updateCartUI();
+    }
+
+    function changeQty(id, delta){
+      const cur = state.cart[id];
+      if(!cur) return;
+      const next = cur.qty + delta;
+      if(next <= 0) removeFromCart(id);
+      else state.cart[id].qty = next;
+      updateCartUI();
+    }
+
+    function updateCartUI(){
+      const keys = Object.keys(state.cart);
+      const totalQty = keys.reduce((s,k) => s + state.cart[k].qty, 0);
+      cartCount.textContent = totalQty;
+      cartItemsEl.innerHTML = '';
+      let total = 0;
+      for(const k of keys){
+        const it = state.cart[k];
+        total += it.price * it.qty;
+        const row = document.createElement('div');
+        row.className = 'cart-item';
+        row.innerHTML = `
+          <div style="display:flex;gap:10px;align-items:center;">
+            <div style="width:56px;height:44px;border-radius:8px;overflow:hidden;"><img src="${it.img}" style="width:100%;height:100%;object-fit:cover"></div>
+            <div class="meta">
+              <div style="font-weight:800">${it.title}</div>
+              <div style="color:var(--muted); font-size:0.88rem">₹${it.price} • ${it.qty} ×</div>
+            </div>
+          </div>
+          <div style="display:flex;flex-direction:column;align-items:flex-end;gap:6px;">
+            <div style="font-weight:800">₹${it.price * it.qty}</div>
+            <div style="display:flex;gap:6px;">
+              <button data-action="minus" data-id="${k}" style="background:#eee;border:none;padding:6px 8px;border-radius:8px;cursor:pointer">-</button>
+              <button data-action="plus" data-id="${k}" style="background:#eee;border:none;padding:6px 8px;border-radius:8px;cursor:pointer">+</button>
+            </div>
+          </div>
+        `;
+        cartItemsEl.appendChild(row);
+      }
+      cartTotalEl.textContent = `₹${total}`;
+      document.getElementById('openCart').ariaExpanded = keys.length > 0;
+    }
+
+    // open cart drawer temporarily when adding
+    function openCartTemp(){
+      cartDrawer.classList.add('open');
+      cartDrawer.setAttribute('aria-hidden','false');
+      clearTimeout(window._cartCloseTimeout);
+      window._cartCloseTimeout = setTimeout(()=>{/* keep open */}, 3000);
+    }
+
+    // orders local storage helpers
+    function saveOrderToHistory(payload) {
+      try {
+        const raw = localStorage.getItem('orders');
+        const arr = raw ? JSON.parse(raw) : [];
+        arr.unshift(payload);
+        localStorage.setItem('orders', JSON.stringify(arr.slice(0,50)));
+      } catch(e) { console.error(e); }
+    }
+
+    function renderOrders() {
+      ordersList.innerHTML = '';
+      const ordersRaw = localStorage.getItem('orders');
+      const orders = ordersRaw ? JSON.parse(ordersRaw) : [];
+      const checkoutPayload = localStorage.getItem('checkoutPayload');
+      if (checkoutPayload) {
+        const cp = JSON.parse(checkoutPayload);
+        orders.unshift({ cart: cp.cart, total: cp.total, timestamp: cp.timestamp, temp:true });
+      }
+      if (orders.length === 0) {
+        ordersList.innerHTML = '<div style="color:var(--muted)">No orders yet.</div>';
+        return;
+      }
+      for (const o of orders) {
+        const d = new Date(o.timestamp || Date.now());
+        const orderEl = document.createElement('div');
+        orderEl.className = 'order';
+        const title = document.createElement('div'); title.style.flex = '1';
+        title.innerHTML = `<div style="font-weight:800">${o.temp ? 'Recent (not confirmed)' : 'Order'}</div>
+                           <div style="color:var(--muted);font-size:0.9rem">${d.toLocaleString()}</div>`;
+        const right = document.createElement('div'); right.style.textAlign = 'right';
+        right.innerHTML = `<div style="font-weight:800">₹${o.total}</div>
+                           <div style="color:var(--muted);font-size:0.85rem">${Object.keys(o.cart || {}).length} items</div>`;
+        orderEl.appendChild(title); orderEl.appendChild(right); ordersList.appendChild(orderEl);
+      }
+    }
+
+    // Position profile menu (fixed) so it's always on top and aligned
+    function positionProfileMenu() {
+      const rect = profileBtn.getBoundingClientRect();
+      const menu = profileMenu;
+      // make visible for measurement
+      menu.style.display = 'block';
+      menu.style.visibility = 'hidden';
+      const menuRect = menu.getBoundingClientRect();
+      menu.style.visibility = '';
+      // place below if fits, otherwise above
+      const topBelow = rect.bottom + 12;
+      const topAbove = rect.top - 12 - menuRect.height;
+      const fitsBelow = (topBelow + menuRect.height) <= window.innerHeight;
+      let left = rect.right - menuRect.width;
+      if (left < 8) left = 8;
+      if (left + menuRect.width > window.innerWidth - 8) left = Math.max(8, window.innerWidth - 8 - menuRect.width);
+      menu.style.left = left + 'px';
+      menu.style.top = (fitsBelow ? topBelow : Math.max(8, topAbove)) + 'px';
+    }
+
+    // UI Events
+    document.addEventListener('click', (e) => {
+      const add = e.target.closest('.add-btn');
+      if(add){ addToCart(add.dataset.id); return; }
+
+      const tab = e.target.closest('.tab');
+      if(tab){ state.cat = tab.dataset.cat; setActiveTab(state.cat); renderItems(); return; }
+
+      const cartOpen = e.target.closest('#openCart');
+      if(cartOpen){ cartDrawer.classList.toggle('open'); cartDrawer.setAttribute('aria-hidden', String(!cartDrawer.classList.contains('open'))); return; }
+
+      const cartClose = e.target.closest('#closeCart');
+      if(cartClose){ cartDrawer.classList.remove('open'); cartDrawer.setAttribute('aria-hidden','true'); return; }
+
+      const cartBtn = e.target.closest('button[data-action]');
+      if(cartBtn){ const id = cartBtn.dataset.id, act = cartBtn.dataset.action; if(act === 'plus') changeQty(id, 1); if(act === 'minus') changeQty(id, -1); return; }
+
+      const checkout = e.target.closest('#checkoutBtn');
+      if (checkout) {
+        if (Object.keys(state.cart).length === 0) { alert('Your cart is empty.'); return; }
+        const payload = { cart: state.cart, total: Object.values(state.cart).reduce((s, it) => s + it.price * it.qty, 0), timestamp: Date.now() };
+        localStorage.setItem('checkoutPayload', JSON.stringify(payload));
+        saveOrderToHistory(payload);
+        window.location.href = 'payment.html';
+        return;
+      }
+
+      // profile actions and outside-click closing
+      if (!e.target.closest('.profile-menu') && !e.target.closest('#profileBtn')) {
+        profileMenu.classList.remove('open');
+        profileMenu.setAttribute('aria-hidden','true');
+        profileBtn.setAttribute('aria-expanded','false');
+      }
+
+      if (e.target.closest('#showProfile')) { alert('Name: ' + (menuName.textContent || 'Guest') + '\nEmail: ' + (menuEmail.textContent || '—')); return; }
+      if (e.target.closest('#showOrders')) { renderOrders(); ordersModal.classList.add('open'); ordersModal.setAttribute('aria-hidden','false'); return; }
+      if (e.target.closest('#myCartFromMenu')) { cartDrawer.classList.add('open'); cartDrawer.setAttribute('aria-hidden','false'); return; }
+      if (e.target.closest('#logoutBtn')) { fetch('/api/logout', { method: 'POST' }).finally(()=>{ window.location.href = 'index.html'; }); return; }
+      if (e.target.closest('#changePhotoBtn')) { photoInput.click(); return; }
+      if (e.target.closest('#removePhotoBtn')) {
+        const prof = JSON.parse(localStorage.getItem('profile') || '{}');
+        delete prof.photo;
+        localStorage.setItem('profile', JSON.stringify(prof));
+        applyProfileToUI(prof);
+        return;
+      }
+    });
+
+    // profile button handler
+    profileBtn.addEventListener('click', (ev) => {
+      ev.stopPropagation();
+      const open = profileMenu.classList.toggle('open');
+      profileMenu.setAttribute('aria-hidden', String(!open));
+      profileBtn.setAttribute('aria-expanded', String(open));
+      if (open) requestAnimationFrame(positionProfileMenu);
+    });
+
+    closeOrders.addEventListener('click', () => {
+      ordersModal.classList.remove('open'); ordersModal.setAttribute('aria-hidden','true');
+    });
+
+    // photo input
+    photoInput.addEventListener('change', (ev) => {
+      const f = ev.target.files && ev.target.files[0];
+      if (!f) return;
+      const reader = new FileReader();
+      reader.onload = function(evt) {
+        const b64 = evt.target.result;
+        const prof = JSON.parse(localStorage.getItem('profile') || '{}');
+        prof.photo = b64;
+        localStorage.setItem('profile', JSON.stringify(prof));
+        applyProfileToUI(prof);
+      };
+      reader.readAsDataURL(f);
+    });
+
+    // apply profile to UI
+    function applyProfileToUI(profile) {
+      const name = profile.name || 'Guest';
+      const email = profile.email || '';
+      profileNameEl.textContent = name;
+      menuName.textContent = name;
+      menuEmail.textContent = email || '—';
+      if (profile.photo) {
+        avatarEl.innerHTML = `<img src="${profile.photo}" alt="avatar" style="width:100%;height:100%;object-fit:cover">`;
+        menuAvatar.innerHTML = `<img src="${profile.photo}" alt="avatar" style="width:100%;height:100%;object-fit:cover">`;
+      } else {
+        const initials = name.split(' ').map(s => s[0]).join('').slice(0,2).toUpperCase() || 'D';
+        avatarEl.textContent = initials;
+        menuAvatar.textContent = initials;
+      }
+    }
+
+    // load profile from localStorage or server
+    async function loadProfile() {
+      try {
+        const stored = localStorage.getItem('profile');
+        if (stored) applyProfileToUI(JSON.parse(stored));
+        const res = await fetch('/api.me' /* intentionally incorrect to avoid crash if missing */).catch(()=>null);
+        // prefer /api/me in real server; safe fallback above
+        if (res && res.ok) {
+          const data = await res.json();
+          const prof = JSON.parse(localStorage.getItem('profile') || '{}');
+          prof.name = data.username || prof.name || 'User';
+          localStorage.setItem('profile', JSON.stringify(prof));
+          applyProfileToUI(prof);
+        }
+      } catch(e){ console.warn('profile load error', e); }
+    }
+
+    // initial setup
+    setActiveTab(state.cat);
+    renderItems();
+    updateCartUI();
+    loadProfile();
+
+    // accessibility: close on ESC
+    document.addEventListener('keydown', (e) => {
+      if(e.key === 'Escape') {
+        cartDrawer.classList.remove('open'); cartDrawer.setAttribute('aria-hidden','true');
+        profileMenu.classList.remove('open'); profileMenu.setAttribute('aria-hidden','true');
+        ordersModal.classList.remove('open'); ordersModal.setAttribute('aria-hidden','true');
+      }
+    });
+
+    // reposition profile menu on resize/scroll
+    window.addEventListener('resize', () => { if (profileMenu.classList.contains('open')) requestAnimationFrame(positionProfileMenu); });
+    window.addEventListener('scroll', () => { if (profileMenu.classList.contains('open')) requestAnimationFrame(positionProfileMenu); }, { passive: true });
+
+    // ensure orders array exists
+    (function ensureOrders(){ try { if (!localStorage.getItem('orders')) localStorage.setItem('orders', JSON.stringify([])); } catch(e){} })();
+
+  </script>
+</body>
+</html>
